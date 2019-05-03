@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
 import io.cdm.backend.mysql.BufferUtil;
 import io.cdm.backend.mysql.MySQLMessage;
 import io.cdm.backend.mysql.StreamUtil;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 
 /**
  * From client to server whenever the client wants the server to do something.
@@ -112,7 +112,7 @@ public class CommandPacket extends MySQLPacket {
     }
 
     @Override
-    public void write(BackendAIOConnection c) {
+    public void write(BackendIOConnection c) {
         ByteBuffer buffer = c.allocate();
         try {    
 	        BufferUtil.writeUB3(buffer, calcPacketSize());

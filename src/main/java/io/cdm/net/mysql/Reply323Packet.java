@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 
 import io.cdm.backend.mysql.BufferUtil;
 import io.cdm.backend.mysql.StreamUtil;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 
 /**
  * @author mycat
@@ -49,7 +49,7 @@ public class Reply323Packet extends MySQLPacket {
     }
 
     @Override
-    public void write(BackendAIOConnection c) {
+    public void write(BackendIOConnection c) {
         ByteBuffer buffer = c.allocate();
         BufferUtil.writeUB3(buffer, calcPacketSize());
         buffer.put(packetId);

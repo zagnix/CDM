@@ -89,8 +89,8 @@ public final class NIOProcessor {
 			total += fron.getWriteQueue().size();
 		}
 		for (BackendConnection back : backends.values()) {
-			if (back instanceof BackendAIOConnection) {
-				total += ((BackendAIOConnection) back).getWriteQueue().size();
+			if (back instanceof BackendIOConnection) {
+				total += ((BackendIOConnection) back).getWriteQueue().size();
 			}
 		}
 		return total;

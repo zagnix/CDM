@@ -44,8 +44,7 @@ public class MySQLConnectionFactory extends BackendConnectionFactory {
 			String schema) throws IOException {
 
 		DBHostConfig dsc = pool.getConfig();
-		NetworkChannel channel = openSocketChannel(CDMServer.getInstance()
-				.isAIO());
+		NetworkChannel channel = openSocketChannel();
 
 		MySQLConnection c = new MySQLConnection(channel, pool.isReadNode());
 		CDMServer.getInstance().getConfig().setSocketParams(c, false);

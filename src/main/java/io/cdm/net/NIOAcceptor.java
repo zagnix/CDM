@@ -132,6 +132,7 @@ public final class NIOAcceptor extends Thread implements SocketAcceptor{
 			FrontendConnection c = factory.make(channel);
 			c.setAccepted(true);
 			c.setId(ID_GENERATOR.getId());
+
 			NIOProcessor processor = (NIOProcessor) CDMServer.getInstance()
 					.nextProcessor();
 			c.setProcessor(processor);

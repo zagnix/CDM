@@ -31,7 +31,7 @@ import io.cdm.backend.mysql.BufferUtil;
 import io.cdm.backend.mysql.MySQLMessage;
 import io.cdm.backend.mysql.StreamUtil;
 import io.cdm.config.Capabilities;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 
 /**
  * From client to server during initial handshake.
@@ -111,7 +111,7 @@ public class AuthPacket extends MySQLPacket {
     }
 
     @Override
-    public void write(BackendAIOConnection c) {
+    public void write(BackendIOConnection c) {
         ByteBuffer buffer = c.allocate();
         BufferUtil.writeUB3(buffer, calcPacketSize());
         buffer.put(packetId);

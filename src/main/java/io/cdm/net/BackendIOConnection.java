@@ -32,14 +32,14 @@ import io.cdm.backend.BackendConnection;
 /**
  * @author mycat
  */
-public abstract class BackendAIOConnection extends AbstractConnection implements
+public abstract class BackendIOConnection extends AbstractConnection implements
 		BackendConnection {
 
 	
 	
 	protected boolean isFinishConnect;
 
-	public BackendAIOConnection(NetworkChannel channel) {
+	public BackendIOConnection(NetworkChannel channel) {
 		super(channel);
 	}
 

@@ -23,35 +23,16 @@
  */
 package io.cdm;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.channels.AsynchronousChannelGroup;
-import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-
-import io.cdm.backend.datasource.PhysicalDatasource;
-import io.cdm.backend.mysql.xa.*;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.locks.InterProcessMutex;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.cdm.backend.BackendConnection;
 import io.cdm.backend.datasource.PhysicalDBNode;
 import io.cdm.backend.datasource.PhysicalDBPool;
+import io.cdm.backend.datasource.PhysicalDatasource;
 import io.cdm.backend.heartbeat.zkprocess.MycatLeaderLatch;
 import io.cdm.backend.mysql.nio.handler.MultiNodeCoordinator;
+import io.cdm.backend.mysql.xa.*;
 import io.cdm.backend.mysql.xa.recovery.Repository;
 import io.cdm.backend.mysql.xa.recovery.impl.FileSystemRepository;
 import io.cdm.buffer.BufferPool;
@@ -68,14 +49,7 @@ import io.cdm.config.model.TableConfig;
 import io.cdm.config.table.structure.MySQLTableStructureDetector;
 import io.cdm.manager.ManagerConnectionFactory;
 import io.cdm.memory.MyCatMemory;
-import io.cdm.net.AIOAcceptor;
-import io.cdm.net.AIOConnector;
-import io.cdm.net.NIOAcceptor;
-import io.cdm.net.NIOConnector;
-import io.cdm.net.NIOProcessor;
-import io.cdm.net.NIOReactorPool;
-import io.cdm.net.SocketAcceptor;
-import io.cdm.net.SocketConnector;
+import io.cdm.net.*;
 import io.cdm.route.MyCATSequnceProcessor;
 import io.cdm.route.RouteService;
 import io.cdm.route.factory.RouteStrategyFactory;
@@ -93,6 +67,22 @@ import io.cdm.util.ExecutorUtil;
 import io.cdm.util.NameableExecutor;
 import io.cdm.util.TimeUtil;
 import io.cdm.util.ZKUtils;
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.locks.InterProcessMutex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.AsynchronousChannelGroup;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author mycat
@@ -125,7 +115,6 @@ public class CDMServer {
 
     // System Buffer Pool Instance
     private BufferPool bufferPool;
-    private boolean aio = false;
 
     //XA事务全局ID生成
     private final AtomicLong xaIDInc = new AtomicLong();
@@ -189,6 +178,7 @@ public class CDMServer {
 
         // load datanode active index from properties
         dnIndexProperties = loadDnIndexProps();
+
         try {
             //SQL解析器
             sqlInterceptor = (SQLInterceptor) Class.forName(
@@ -331,7 +321,6 @@ public class CDMServer {
         ServerConnectionFactory sf = new ServerConnectionFactory();
         SocketAcceptor manager = null;
         SocketAcceptor server = null;
-        aio = (system.getUsingAIO() == 1);
 
         // startup processors
         int threadPoolSize = system.getProcessorExecutor();
@@ -403,50 +392,21 @@ public class CDMServer {
                     businessExecutor);
         }
 
-        if (aio) {
-            LOGGER.info("using aio network handler ");
-            asyncChannelGroups = new AsynchronousChannelGroup[processorCount];
-            // startup connector
-            connector = new AIOConnector();
-            for (int i = 0; i < processors.length; i++) {
-                asyncChannelGroups[i] = AsynchronousChannelGroup.withFixedThreadPool(processorCount,
-                        new ThreadFactory() {
-                            private int inx = 1;
 
-                            @Override
-                            public Thread newThread(Runnable r) {
-                                Thread th = new Thread(r);
-                                //TODO
-                                th.setName(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "AIO" + (inx++));
-                                LOGGER.info("created new AIO thread " + th.getName());
-                                return th;
-                            }
-                        }
-                );
-            }
-            manager = new AIOAcceptor(NAME + "Manager", system.getBindIp(),
-                    system.getManagerPort(), mf, this.asyncChannelGroups[0]);
+        LOGGER.info("using nio network handler ");
 
-            // startup server
+        NIOReactorPool reactorPool = new NIOReactorPool(
+                DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOREACTOR",
+                processors.length);
+        connector = new NIOConnector(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOConnector", reactorPool);
+        ((NIOConnector) connector).start();
 
-            server = new AIOAcceptor(NAME + "Server", system.getBindIp(),
-                    system.getServerPort(), sf, this.asyncChannelGroups[0]);
+        manager = new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME
+                + "Manager", system.getBindIp(), system.getManagerPort(), mf, reactorPool);
 
-        } else {
-            LOGGER.info("using nio network handler ");
+        server = new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME
+                + "Server", system.getBindIp(), system.getServerPort(), sf, reactorPool);
 
-            NIOReactorPool reactorPool = new NIOReactorPool(
-                    DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOREACTOR",
-                    processors.length);
-            connector = new NIOConnector(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + "NIOConnector", reactorPool);
-            ((NIOConnector) connector).start();
-
-            manager = new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME
-                    + "Manager", system.getBindIp(), system.getManagerPort(), mf, reactorPool);
-
-            server = new NIOAcceptor(DirectByteBufferPool.LOCAL_BUF_THREAD_PREX + NAME
-                    + "Server", system.getBindIp(), system.getServerPort(), sf, reactorPool);
-        }
         // manager start
         manager.start();
         LOGGER.info(manager.getName() + " is started and listening on " + manager.getPort());
@@ -953,7 +913,7 @@ public class CDMServer {
                         Map<String, PhysicalDBPool> nodes = config.getDataHosts();
                         for (PhysicalDBPool node : nodes.values()) {
                             Collection<PhysicalDatasource> dataSources = node.getAllDataSources();
-                            for(PhysicalDatasource ds : dataSources) {
+                            for (PhysicalDatasource ds : dataSources) {
                                 ds.calcTotalCount();
                             }
                         }
@@ -989,17 +949,17 @@ public class CDMServer {
 
                 List<CoordinatorLogEntry> CoordinatorLogEntryList = null;
                 long currentTime = TimeUtil.currentTimeMillis();
-                for(CoordinatorLogEntry coordinatorLogEntry : coordinatorLogEntries) {
+                for (CoordinatorLogEntry coordinatorLogEntry : coordinatorLogEntries) {
                     //超过执行时间20秒 进行重试
-                    if(currentTime >  sqlTimeout + 20 * 1000 + coordinatorLogEntry.createTime){
-                        if(CoordinatorLogEntryList == null) {
+                    if (currentTime > sqlTimeout + 20 * 1000 + coordinatorLogEntry.createTime) {
+                        if (CoordinatorLogEntryList == null) {
                             CoordinatorLogEntryList = new ArrayList<CoordinatorLogEntry>();
                         }
                         CoordinatorLogEntryList.add(coordinatorLogEntry);
                     }
                 }
-                if(CoordinatorLogEntryList != null) {
-                    performXARecoveryLog((CoordinatorLogEntry[])CoordinatorLogEntryList.toArray());
+                if (CoordinatorLogEntryList != null) {
+                    performXARecoveryLog((CoordinatorLogEntry[]) CoordinatorLogEntryList.toArray());
                 }
             }
         };
@@ -1048,19 +1008,19 @@ public class CDMServer {
                     needRollback = true;
                 }
                 if (participantLogEntry.txState == TxState.TX_COMMITED_STATE) {
-                	hasCommit = true;
+                    hasCommit = true;
                 }
             }
             //补充提交 prepare 状态的提交, xa commit or xa rollback
             if (needRollback) {
                 //1 can rollback
-            	if(!hasCommit) {
+                if (!hasCommit) {
                     for (int j = 0; j < coordinatorLogEntry.participants.length; j++) {
                         ParticipantLogEntry participantLogEntry = coordinatorLogEntry.participants[j];
                         if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
                             continue;
                         }                         //XA rollback
-                        String xacmd = "XA ROLLBACK " + coordinatorLogEntry.id  +",'"+ participantLogEntry.resourceName+"'" + ';';
+                        String xacmd = "XA ROLLBACK " + coordinatorLogEntry.id + ",'" + participantLogEntry.resourceName + "'" + ';';
                         LOGGER.debug("send xaCmd : {}", xacmd);
                         OneRawSQLQueryResultHandler resultHandler = new OneRawSQLQueryResultHandler(new String[0], new XARollbackCallback(coordinatorLogEntry.id,
                                 participantLogEntry
@@ -1068,15 +1028,15 @@ public class CDMServer {
                         //xa cmd send
                         sendXaCmd(participantLogEntry, xacmd, resultHandler);
                     }
-            	}  else {
-                    LOGGER.debug( "some has commit in {}",coordinatorLogEntry);
+                } else {
+                    LOGGER.debug("some has commit in {}", coordinatorLogEntry);
                     for (int j = 0; j < coordinatorLogEntry.participants.length; j++) {
                         ParticipantLogEntry participantLogEntry = coordinatorLogEntry.participants[j];
                         if (participantLogEntry.txState == TxState.TX_COMMITED_STATE || participantLogEntry.txState == TxState.TX_ROLLBACKED_STATE) {
                             continue;
                         }
                         //XA commit
-                        String xacmd = "XA COMMIT " + coordinatorLogEntry.id  +",'"+ participantLogEntry.resourceName+"'" + ';';
+                        String xacmd = "XA COMMIT " + coordinatorLogEntry.id + ",'" + participantLogEntry.resourceName + "'" + ';';
                         LOGGER.debug("send xaCmd : {}", xacmd);
                         OneRawSQLQueryResultHandler resultHandler = new OneRawSQLQueryResultHandler(new String[0], new XACommitCallback(coordinatorLogEntry.id,
                                 participantLogEntry
@@ -1084,10 +1044,10 @@ public class CDMServer {
                         //xa cmd send
                         sendXaCmd(participantLogEntry, xacmd, resultHandler);
                     }
-            	}      	
+                }
             }
         }
-   }
+    }
 
     private void sendXaCmd(ParticipantLogEntry participantLogEntry, String xacmd,
                            OneRawSQLQueryResultHandler resultHandler) {
@@ -1130,10 +1090,6 @@ public class CDMServer {
     //huangyiming add
     public DirectByteBufferPool getDirectByteBufferPool() {
         return (DirectByteBufferPool) bufferPool;
-    }
-
-    public boolean isAIO() {
-        return aio;
     }
 
 

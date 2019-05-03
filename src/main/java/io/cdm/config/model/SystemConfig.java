@@ -162,7 +162,6 @@ public final class SystemConfig {
 	private int mutiNodePatchSize = MUTINODELIMIT_PATCH_SIZE;
 
 	private String defaultSqlParser = DEFAULT_SQL_PARSER;
-	private int usingAIO = 0;
 	private int packetHeaderSize = 4;
 	private int maxPacketSize = 16 * 1024 * 1024;
 	private int mycatNodeId=1;
@@ -860,13 +859,6 @@ public final class SystemConfig {
 		this.sqlInterceptorFile = sqlInterceptorFile;
 	}
 
-	public int getUsingAIO() {
-		return usingAIO;
-	}
-
-	public void setUsingAIO(int usingAIO) {
-		this.usingAIO = usingAIO;
-	}
 
 	public int getMycatNodeId() {
 		return mycatNodeId;
@@ -921,7 +913,6 @@ public final class SystemConfig {
 				+ ", mutiNodeLimitType=" + mutiNodeLimitType 
 				+ ", mutiNodePatchSize=" + mutiNodePatchSize 
 				+ ", defaultSqlParser=" + defaultSqlParser
-				+ ", usingAIO=" + usingAIO 
 				+ ", packetHeaderSize=" + packetHeaderSize 
 				+ ", maxPacketSize=" + maxPacketSize
 				+ ", mycatNodeId=" + mycatNodeId + "]";

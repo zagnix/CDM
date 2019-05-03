@@ -25,7 +25,7 @@ package io.cdm.net.mysql;
 
 import java.nio.ByteBuffer;
 
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 import io.cdm.net.FrontendConnection;
 
 /**
@@ -199,7 +199,7 @@ public abstract class MySQLPacket {
     /**
      * 把数据包通过后端连接写出，一般使用buffer机制来提高写的吞吐量。
      */
-    public void write(BackendAIOConnection c) {
+    public void write(BackendIOConnection c) {
         throw new UnsupportedOperationException();
     }
 

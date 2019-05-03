@@ -5,7 +5,7 @@ import java.util.List;
 
 import io.cdm.CDMServer;
 import io.cdm.backend.BackendConnection;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 import io.cdm.net.mysql.BinaryPacket;
 import io.cdm.route.RouteResultsetNode;
 import io.cdm.sqlengine.mpp.LoadData;
@@ -19,7 +19,7 @@ public class LoadDataUtil
     {
 
         byte packId= data[3];
-        BackendAIOConnection backendAIOConnection= (BackendAIOConnection) conn;
+        BackendIOConnection backendIOConnection = (BackendIOConnection) conn;
         RouteResultsetNode rrn= (RouteResultsetNode) conn.getAttachment();
         LoadData loadData= rrn.getLoadData();
         List<String> loadDataData = loadData.getData();
@@ -40,12 +40,12 @@ public class LoadDataUtil
 
                 }
 
-                packId=   writeToBackConnection(packId,new ByteArrayInputStream(bos.toByteArray()),backendAIOConnection);
+                packId=   writeToBackConnection(packId,new ByteArrayInputStream(bos.toByteArray()), backendIOConnection);
 
             }   else
             {
                 //从文件读取
-                packId=   writeToBackConnection(packId,new BufferedInputStream(new FileInputStream(loadData.getFileName())),backendAIOConnection);
+                packId=   writeToBackConnection(packId,new BufferedInputStream(new FileInputStream(loadData.getFileName())), backendIOConnection);
 
             }
         }catch (IOException e)
@@ -57,7 +57,7 @@ public class LoadDataUtil
             //结束必须发空包
             byte[] empty = new byte[] { 0, 0, 0,3 };
             empty[3]=++packId;
-            backendAIOConnection.write(empty);
+            backendIOConnection.write(empty);
         }
 
 
@@ -65,12 +65,12 @@ public class LoadDataUtil
 
     }
 
-    public static byte writeToBackConnection(byte packID,InputStream inputStream,BackendAIOConnection backendAIOConnection) throws IOException
+    public static byte writeToBackConnection(byte packID, InputStream inputStream, BackendIOConnection backendIOConnection) throws IOException
     {
         try
         {
             int packSize = CDMServer.getInstance().getConfig().getSystem().getBufferPoolChunkSize() - 5;
-            // int packSize = backendAIOConnection.getMaxPacketSize() / 32;
+            // int packSize = backendIOConnection.getMaxPacketSize() / 32;
             //  int packSize=65530;
             byte[] buffer = new byte[packSize];
             int len = -1;
@@ -89,7 +89,7 @@ public class LoadDataUtil
                 BinaryPacket packet = new BinaryPacket();
                 packet.packetId = ++packID;
                 packet.data = temp;
-                packet.write(backendAIOConnection);
+                packet.write(backendIOConnection);
             }
 
         }

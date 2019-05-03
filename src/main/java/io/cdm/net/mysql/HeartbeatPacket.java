@@ -27,7 +27,7 @@ import java.nio.ByteBuffer;
 
 import io.cdm.backend.mysql.BufferUtil;
 import io.cdm.backend.mysql.MySQLMessage;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 
 /**
  * From client to server when the client do heartbeat between mycat cluster.
@@ -54,7 +54,7 @@ public class HeartbeatPacket extends MySQLPacket {
     }
 
     @Override
-    public void write(BackendAIOConnection c) {
+    public void write(BackendIOConnection c) {
         ByteBuffer buffer = c.allocate();
         BufferUtil.writeUB3(buffer, calcPacketSize());
         buffer.put(packetId);

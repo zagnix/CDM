@@ -32,7 +32,7 @@ import io.cdm.backend.mysql.PacketUtil;
 import io.cdm.backend.mysql.nio.MySQLConnection;
 import io.cdm.config.Fields;
 import io.cdm.manager.ManagerConnection;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 import io.cdm.net.NIOProcessor;
 import io.cdm.net.mysql.EOFPacket;
 import io.cdm.net.mysql.FieldPacket;
@@ -127,8 +127,8 @@ public class ShowBackend {
 
 	private static RowDataPacket getRow(BackendConnection c, String charset) {
 		RowDataPacket row = new RowDataPacket(FIELD_COUNT);
-		if (c instanceof BackendAIOConnection) {
-			row.add(((BackendAIOConnection) c).getProcessor().getName()
+		if (c instanceof BackendIOConnection) {
+			row.add(((BackendIOConnection) c).getProcessor().getName()
 					.getBytes());
 		} else if(c instanceof JDBCConnection){
 		    row.add(((JDBCConnection)c).getProcessor().getName().getBytes());

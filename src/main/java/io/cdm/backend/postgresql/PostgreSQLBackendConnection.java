@@ -18,7 +18,7 @@ import io.cdm.backend.postgresql.utils.PIOUtils;
 import io.cdm.backend.postgresql.utils.PacketUtils;
 import io.cdm.backend.postgresql.utils.PgSqlApaterUtils;
 import io.cdm.config.Isolations;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 import io.cdm.route.RouteResultsetNode;
 import io.cdm.server.ServerConnection;
 import io.cdm.server.parser.ServerParse;
@@ -30,7 +30,7 @@ import io.cdm.util.exception.UnknownTxIsolationException;
  * @author Coollf
  *
  */
-public class PostgreSQLBackendConnection extends BackendAIOConnection {
+public class PostgreSQLBackendConnection extends BackendIOConnection {
 
 	public static enum BackendConnectionState {
 		closed, connected, connecting

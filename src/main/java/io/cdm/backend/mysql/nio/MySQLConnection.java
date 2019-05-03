@@ -32,7 +32,7 @@ import io.cdm.backend.mysql.SecurityUtil;
 import io.cdm.backend.mysql.nio.handler.ResponseHandler;
 import io.cdm.config.Capabilities;
 import io.cdm.config.Isolations;
-import io.cdm.net.BackendAIOConnection;
+import io.cdm.net.BackendIOConnection;
 import io.cdm.net.mysql.*;
 import io.cdm.route.RouteResultsetNode;
 import io.cdm.server.ServerConnection;
@@ -49,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author mycat
  */
-public class MySQLConnection extends BackendAIOConnection {
+public class MySQLConnection extends BackendIOConnection {
 	private static final Logger LOGGER = LoggerFactory
 			.getLogger(MySQLConnection.class);
 	private static final long CLIENT_FLAGS = initClientFlags();

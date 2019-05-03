@@ -20,8 +20,7 @@ public class PostgreSQLBackendConnectionFactory extends
 			ResponseHandler handler, final String schema) throws IOException {
 
 		final DBHostConfig dsc = pool.getConfig();
-		NetworkChannel channel = this.openSocketChannel(CDMServer
-				.getInstance().isAIO());
+		NetworkChannel channel = this.openSocketChannel();
 
 		final PostgreSQLBackendConnection c = new PostgreSQLBackendConnection(
 				channel, pool.isReadNode());
